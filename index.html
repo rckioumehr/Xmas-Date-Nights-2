@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎄 Snooks' Christmas Date Calendar 🎅</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Mountains+of+Christmas:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc; /* Light snowy background */
+            background: linear-gradient(180deg, #e0f2fe 0%, #f7fafc 100%);
+        }
+        .christmas-title {
+            font-family: 'Mountains of Christmas', cursive;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        .date-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .date-card.completed {
+            background-color: #d1fae5; /* Light green for completed */
+            border-left: 10px solid #10b981; /* Green stripe */
+            opacity: 0.8;
+        }
+        .date-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(252, 165, 165, 0.5); /* Soft red shadow on hover */
+        }
+        /* Custom Checkbox Style (looks like a gift tag) */
+        .custom-checkbox {
+            appearance: none;
+            width: 2rem;
+            height: 2rem;
+            min-width: 2rem;
+            border: 3px solid #ef4444; /* Red border */
+            border-radius: 0.5rem;
+            cursor: pointer;
+            position: relative;
+            background-color: #fef2f2; /* Light background */
+        }
+        .custom-checkbox:checked {
+            background-color: #10b981; /* Green fill when checked */
+            border-color: #059669;
+        }
+        .custom-checkbox:checked::after {
+            content: '✅';
+            font-size: 1.5rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div id="app" class="max-w-4xl mx-auto">
+        <!-- Header and Progress Tracker -->
+        <header class="text-center mb-8 p-4 bg-white/90 backdrop-blur-sm rounded-xl shadow-xl border-t-4 border-red-500">
+            <h1 class="christmas-title text-4xl md:text-5xl font-bold text-red-600 mb-2 flex items-center justify-center">
+                🎁 Snooks' 2024 Christmas Dates! ❄️
+            </h1>
+            <p class="text-gray-700 font-semibold mb-3">Our Holiday Date Night Progress:</p>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden shadow-inner">
+                <div id="progress-bar" class="progress-bar h-4 rounded-full bg-green-500 flex items-center justify-center" style="width: 0%">
+                    <span id="progress-text" class="text-xs font-bold text-white mix-blend-difference">0% Complete</span>
+                </div>
+            </div>
+            <p id="loading-status" class="mt-2 text-sm text-gray-500">Loading local progress...</p>
+        </header>
+
+        <!-- Calendar Dates Container -->
+        <div id="calendar-container" class="space-y-6">
+            <!-- Dates will be dynamically inserted here -->
+        </div>
+
+        <!-- Final Message Button -->
+        <div class="mt-12 text-center">
+            <button id="final-button" class="px-8 py-4 text-xl font-extrabold rounded-full bg-yellow-400 text-red-800 shadow-2xl hover:bg-yellow-500 transition duration-300 transform hover:scale-105" onclick="window.app.showFinalMessage()">
+                Click here
+            </button>
+            <div id="final-message" class="mt-4 text-4xl md:text-6xl text-red-600 christmas-title font-bold hidden">
+                Merry Christmas Snooks!! ❤️
+            </div>
+        </div>
+
+        <!-- Custom Modal for Alerts (replacing alert()) -->
+        <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-full text-center border-t-4 border-red-500">
+                <p id="modal-text" class="text-lg font-semibold text-gray-800 mb-4">Error message.</p>
+                <button onclick="document.getElementById('modal').classList.add('hidden')" class="px-4 py-2 bg-red-500 text-white font-bold rounded hover:bg-red-600">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LOCAL_STORAGE_KEY = 'snooksChristmasCalendarStatus';
+
+        const app = {
+            // 10 total dates
+            dateSchedule: [
+                { id: '12-05', date: 'Friday (12/5) 🥂', activities: ['Drinks at Lillie Victorian Estbalishment (6:45 PM)', 'Drunk Explortation Union Square Holiday Market (8 pm) 🎄', 'Dinner at Tucci (930 pm)'] },
+                { id: '12-06', date: 'Saturday (12/6) 🏈', activities: ['Brunch at Buvette (12 pm)', 'SEC Championship Game! #GoDawgs (3:30pm) 🐾', 'Christmas Holiday Party! 🥳'] },
+                { id: '12-07', date: 'Sunday (12/7) 🎬', activities: ['Shopping (12 pm)', 'Movie 1 (4 PM)', 'Chef Tyler Dinner (Ryan Sous Chef) (6 pm) 👨‍🍳', 'Movie 2 (830 pm)'] },
+                { id: '12-09', date: 'Tuesday (12/9) 💪', activities: ['Morning Workout Date (7 am)', 'Stumptown Breakfast (8 AM) ☕'] },
+                { id: '12-11', date: 'Thursday (12/11) ✨', activities: ['*Logan in attendance*', 'Drinks (& Optional Dinner) @ Marlton Hotel (9:30 PM) 🍸', 'Miracle on Eight Avenue'] },
+                { id: '12-12', date: 'Friday (12/12) 🎭', activities: ['Drinks at Jolly Bar (Optional)', 'Great Gatsby Broadway (7 pm) 🎩', 'Dinner: Chinese Tuxedo (10:30 pm) 🥡'] },
+                { id: '12-13', date: 'Saturday (12/13) ⛸️', activities: ['Brunch at Jack & Charlies (12 pm)', 'Bryant Park Ice Skating & Holiday Village (3 pm) ❄️'] },
+                { id: '12-14', date: 'Sunday (12/14) 🍿', activities: ['Watermark Christmas Village (1 pm)', 'Metro Private Cinema (5 pm)', 'Dinner: Option A: Eat at Cinema Restaurant following movie', 'Dinner: Option B: Order Ramen 🍜'] },
+                { id: '12-16', date: 'Tuesday (12/16) 🍳', activities: ['Morning workout Date (7 am)', 'Travelers breakfast (8 AM) 🥓'] },
+                { id: '12-18', date: 'Thursday (12/18) 🎁', activities: ['Breakfast at Travelers', 'Christmas Dinner at Hawksmoor NYC (10:15pm) 🍽️', 'XMAS PRESENT EXCHANGE!!!'] }
+            ],
+            completionStatus: {},
+            
+            initLocalApp: function() {
+                try {
+                    // Load status from local storage
+                    const storedStatus = localStorage.getItem(LOCAL_STORAGE_KEY);
+                    this.completionStatus = storedStatus ? JSON.parse(storedStatus) : {};
+                    
+                    this.renderCalendar();
+                    this.calculateProgress();
+                    this.updateLoadingStatus("Local calendar loaded! Progress is saved on this device. 💾");
+
+                } catch (error) {
+                    console.error("Error during app initialization or reading localStorage:", error);
+                    this.updateLoadingStatus(`Error loading status: ${error.message}. Progress will not be saved.`);
+                }
+            },
+
+            renderCalendar: function() {
+                const container = document.getElementById('calendar-container');
+                container.innerHTML = '';
+                
+                this.dateSchedule.forEach(date => {
+                    const isCompleted = this.completionStatus[date.id] === true;
+                    
+                    const dateCard = document.createElement('div');
+                    dateCard.className = `date-card p-6 rounded-xl shadow-lg border-2 border-red-300 transition duration-300 flex flex-col md:flex-row justify-between items-start md:items-center ${isCompleted ? 'completed border-green-500' : 'bg-white border-red-500'}`;
+                    
+                    // Date & Activities Content
+                    let activitiesHtml = date.activities.map(activity => 
+                        `<li class="list-disc ml-4 text-gray-700">${activity}</li>`
+                    ).join('');
+
+                    dateCard.innerHTML = `
+                        <div class="flex-grow mb-4 md:mb-0">
+                            <h2 class="text-2xl font-extrabold text-red-600 mb-2 christmas-title">${date.date}</h2>
+                            <ul class="space-y-1">
+                                ${activitiesHtml}
+                            </ul>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" data-id="${date.id}" class="custom-checkbox" ${isCompleted ? 'checked' : ''} onchange="window.app.toggleDateCompletion(this.dataset.id, this.checked)">
+                                <span class="font-semibold ${isCompleted ? 'text-green-700' : 'text-gray-600'}">
+                                    ${isCompleted ? 'Date Completed! ✅' : 'Mark Complete'}
+                                </span>
+                            </label>
+                        </div>
+                    `;
+                    container.appendChild(dateCard);
+                });
+            },
+
+            toggleDateCompletion: function(dateId, isChecked) {
+                // Update local status
+                this.completionStatus[dateId] = isChecked;
+                
+                try {
+                    // Save status to local storage
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(this.completionStatus));
+                    
+                    this.renderCalendar();
+                    this.calculateProgress();
+                } catch (error) {
+                    console.error("Error saving to localStorage:", error);
+                    this.showModal("Failed to save progress locally. Storage may be full or unavailable.");
+                }
+            },
+
+            calculateProgress: function() {
+                const totalDates = this.dateSchedule.length;
+                const completedDates = Object.values(this.completionStatus).filter(status => status === true).length;
+                const percentage = totalDates > 0 ? Math.round((completedDates / totalDates) * 100) : 0;
+
+                const progressBar = document.getElementById('progress-bar');
+                const progressText = document.getElementById('progress-text');
+
+                progressBar.style.width = `${percentage}%`;
+                progressText.textContent = `${percentage}% Complete (${completedDates}/${totalDates})`;
+            },
+
+            showFinalMessage: function() {
+                document.getElementById('final-button').classList.add('hidden');
+                document.getElementById('final-message').classList.remove('hidden');
+            },
+
+            showModal: function(message) {
+                document.getElementById('modal-text').textContent = message;
+                document.getElementById('modal').classList.remove('hidden');
+            },
+
+            updateLoadingStatus: function(message) {
+                 document.getElementById('loading-status').textContent = message;
+            }
+        };
+        
+        // Expose app functions to the global window object for use in inline HTML handlers
+        window.app = app;
+        
+        // Initialize the app on load
+        document.addEventListener('DOMContentLoaded', () => {
+             app.initLocalApp();
+        });
+    </script>
+</body>
+</html>
